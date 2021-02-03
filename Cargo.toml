@@ -1,0 +1,22 @@
+[package]
+name = "quack"
+version = "0.1.0"
+authors = ["Mat Sadler <mat@sourcetagsandcodes.com>"]
+edition = "2018"
+
+[workspace]
+
+members = [
+    "duck_dns",
+    "public_ip",
+]
+
+[dependencies]
+duck_dns = { path = "duck_dns" }
+log = "0.4"
+nom = "6"
+public_ip = { path = "public_ip" }
+stderrlog = "0.5"
+structopt = "0.3"
+tokio = { version = "1", features = ["full"] }
+url = "2"
