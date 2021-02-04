@@ -1,5 +1,6 @@
 use std::{
     error::Error as StdError,
+    fmt,
     net::{IpAddr, Ipv4Addr, Ipv6Addr},
     time::Duration,
 };
@@ -8,6 +9,17 @@ use duck_dns::{Client, UpdateOptions};
 use structopt::StructOpt;
 
 use crate::{check_ip_opts::CheckIpOpts, opts::Account, parse_duration::parse_duration};
+
+#[derive(Debug)]
+struct IpOptError();
+
+impl fmt::Display for IpOptError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "ip cannot be a v6 ip when ipv6 is also present")
+    }
+}
+
+impl StdError for IpOptError {}
 
 #[derive(StructOpt, Debug)]
 pub struct Update {
@@ -73,7 +85,7 @@ async fn update_now(opts: Update) -> Result<duck_dns::Response, Box<dyn StdError
             UpdateOptions::ipv6(ipv6, opts.verbose)
         }
         (Some(IpAddr::V4(ip)), Some(ipv6)) => UpdateOptions::new(ip, ipv6, opts.verbose),
-        (Some(IpAddr::V6(_)), Some(_)) => panic!("can't supply 2 v6 ips"),
+        (Some(IpAddr::V6(_)), Some(_)) => return Err(IpOptError().into()),
         (None, None) if opts.preflight_ip || opts.preflight_opts.is_some() => {
             let service = match opts.preflight_opts {
                 Some(opts) => opts.into_service().await?,
