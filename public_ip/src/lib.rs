@@ -173,13 +173,16 @@ impl Service {
                 let stream = UdpClientStream::<UdpSocket>::new(server.clone());
                 let (mut client, bg) = AsyncClient::connect(stream).await?;
                 tokio::spawn(bg);
+                debug!("querying {} {} {} {}", server, DNSClass::IN, record_type, &name);
                 let mut response = client
                     .query(name.clone(), DNSClass::IN, *record_type)
                     .await?;
+                trace!("{:#?}", response);
                 let rdata = match response.take_answers().into_iter().next() {
                     Some(a) => a.into_data(),
                     None => return Err(Error::MissingResponse),
                 };
+                debug!("got result {:?}", rdata);
                 let ip = match record_type {
                     RecordType::A => rdata.into_a().expect("expected A record"),
                     RecordType::TXT => rdata

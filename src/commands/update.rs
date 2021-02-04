@@ -6,6 +6,7 @@ use std::{
 };
 
 use duck_dns::{Client, UpdateOptions};
+use log::{debug, error, info};
 use structopt::StructOpt;
 
 use crate::{check_ip_opts::CheckIpOpts, opts::Account, parse_duration::parse_duration};
@@ -58,19 +59,30 @@ impl Update {
         loop {
             if let Some(ref service) = service {
                 match update_preflight_schedule(&client, service, prev_ip, self.verbose).await {
-                    Ok((_, ip)) => prev_ip = ip,
-                    Err(_) => {
-                        tokio::time::sleep(Duration::from_secs(60)).await;
+                    Ok((res, ip)) => {
+                        debug!("prev_ip = {}, ip = {}", prev_ip, ip);
+                        prev_ip = ip;
+                        match res {
+                            Some(r) => info!("{}", r),
+                            None => info!("no ip change, skipping update"),
+                        }
+                    }
+                    Err(e) => {
+                        error!("error during IP preflight: {}", e);
+                        let d = schedule.min(Duration::from_secs(60));
+                        debug!("sleeping for {:?}", d);
+                        tokio::time::sleep(d).await;
                         continue;
                     }
                 };
             } else {
                 match update_schedule(&client, self.verbose).await {
-                    Ok(_) => (),
-                    Err(_) => (),
+                    Ok(r) => info!("{}", r),
+                    Err(e) => error!("{}", e),
                 };
             }
 
+            debug!("sleeping for {:?}", schedule);
             tokio::time::sleep(schedule).await
         }
     }

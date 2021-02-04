@@ -10,7 +10,7 @@ mod parse_duration;
 
 use std::error::Error as StdError;
 
-use log::{debug, error, info};
+use log::{debug, error};
 use structopt::StructOpt;
 use tokio::runtime::Runtime;
 
@@ -27,9 +27,14 @@ fn main() {
 fn run() -> Result<(), Box<dyn StdError>> {
     let opts = Opts::from_args().propagate_verbose();
 
-    stderrlog::new()
-        .modules(vec![module_path!(), "duck_dns", "public_ip"])
-        .quiet(opts.quiet)
+    let mut logger = stderrlog::new();
+    // most of the time we want to scope logging to just this codebase, but
+    // extra verbose -vvvvv level turns on logging for all modules, but only
+    // in debug builds (it might leak tokens, so isn't safe for release builds)
+    if opts.verbose < 5 || !cfg!(debug_assertions) {
+        logger.modules(vec![module_path!(), "duck_dns", "public_ip"]);
+    }
+    logger.quiet(opts.quiet)
         .verbosity(opts.verbose)
         .timestamp(stderrlog::Timestamp::Off)
         .color(stderrlog::ColorChoice::Never)
